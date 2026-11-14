@@ -1,7 +1,7 @@
 
 import { Schema, model } from "mongoose";
 
-// Esquema de incidencias
+// Modelo de incidencias
 const incidentSchema = new Schema(
   {
     title: {
@@ -47,6 +47,13 @@ const incidentSchema = new Schema(
       type: String,
       enum: ["pendiente", "en_proceso", "resuelta"],
       default: "pendiente"
+    },
+
+    // Empleado responsable de la incidencia
+    assignedTo: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null
     }
   },
   {

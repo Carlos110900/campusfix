@@ -6,6 +6,7 @@ import {
   createIncident,
   getIncidents,
   updateIncidentStatus,
+  assignIncident,
   CreateIncidentDTO,
   IncidentStatus
 } from "../services/incident.service";
@@ -35,7 +36,7 @@ const validStatuses: IncidentStatus[] = [
 ];
 
 // ==========================================
-// FUNCIONES DE VALIDACION
+// VALIDACIONES
 // ==========================================
 
 const isValidCategory = (
@@ -67,7 +68,6 @@ const isValidStatus = (
 
 // ==========================================
 // FEATURE 1: REGISTRAR INCIDENCIA
-// POST /api/incidents
 // ==========================================
 
 export const createIncidentController = async (
@@ -161,14 +161,13 @@ export const createIncidentController = async (
     console.error("Error al registrar incidencia:", error);
 
     res.status(500).json({
-      message: "Error interno al registrar la incidencia"
+      message: "Error interno al registrar incidencia"
     });
   }
 };
 
 // ==========================================
 // FEATURE 2: CONSULTAR INCIDENCIAS
-// GET /api/incidents
 // ==========================================
 
 export const getIncidentsController = async (
@@ -176,20 +175,20 @@ export const getIncidentsController = async (
   res: Response
 ): Promise<void> => {
 
+  const status: unknown = req.query.status;
+
+  if (
+    status !== undefined &&
+    !isValidStatus(status)
+  ) {
+    res.status(400).json({
+      message: "Estado no válido",
+      validStatuses
+    });
+    return;
+  }
+
   try {
-    const status: unknown = req.query.status;
-
-    if (
-      status !== undefined &&
-      !isValidStatus(status)
-    ) {
-      res.status(400).json({
-        message: "Estado no válido",
-        validStatuses
-      });
-      return;
-    }
-
     const incidents = await getIncidents(status);
 
     res.status(200).json({
@@ -209,7 +208,6 @@ export const getIncidentsController = async (
 
 // ==========================================
 // FEATURE 3: ACTUALIZAR ESTADO
-// PATCH /api/incidents/:id/status
 // ==========================================
 
 export const updateIncidentStatusController = async (
@@ -217,10 +215,8 @@ export const updateIncidentStatusController = async (
   res: Response
 ): Promise<void> => {
 
-  // Obtener ID de la URL
   const id = req.params.id;
 
-  // Validar identificador de MongoDB
   if (
     typeof id !== "string" ||
     !isValidObjectId(id)
@@ -231,7 +227,6 @@ export const updateIncidentStatusController = async (
     return;
   }
 
-  // Obtener datos enviados
   const input: unknown = req.body;
 
   if (
@@ -247,7 +242,6 @@ export const updateIncidentStatusController = async (
 
   const { status } = input as Record<string, unknown>;
 
-  // Validar nuevo estado
   if (!isValidStatus(status)) {
     res.status(400).json({
       message: "Estado no válido",
@@ -257,13 +251,11 @@ export const updateIncidentStatusController = async (
   }
 
   try {
-    // Actualizar incidencia en MongoDB
     const updatedIncident = await updateIncidentStatus(
       id,
       status
     );
 
-    // Verificar si existe
     if (!updatedIncident) {
       res.status(404).json({
         message: "Incidencia no encontrada"
@@ -271,7 +263,6 @@ export const updateIncidentStatusController = async (
       return;
     }
 
-    // Respuesta exitosa
     res.status(200).json({
       message: "Estado actualizado correctamente",
       data: updatedIncident
@@ -282,6 +273,95 @@ export const updateIncidentStatusController = async (
 
     res.status(500).json({
       message: "Error interno al actualizar incidencia"
+    });
+  }
+};
+
+// ==========================================
+// FEATURE 5: ASIGNAR INCIDENCIA
+// ==========================================
+
+export const assignIncidentController = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+
+  // Obtener ID de la incidencia
+  const incidentId = req.params.id;
+
+  if (
+    typeof incidentId !== "string" ||
+    !isValidObjectId(incidentId)
+  ) {
+    res.status(400).json({
+      message: "ID de incidencia no válido"
+    });
+    return;
+  }
+
+  // Obtener ID del empleado
+  const input: unknown = req.body;
+
+  if (
+    !input ||
+    typeof input !== "object" ||
+    Array.isArray(input)
+  ) {
+    res.status(400).json({
+      message: "Debes enviar un objeto JSON válido"
+    });
+    return;
+  }
+
+  const { userId } = input as Record<string, unknown>;
+
+  if (
+    typeof userId !== "string" ||
+    !isValidObjectId(userId)
+  ) {
+    res.status(400).json({
+      message: "ID de usuario no válido"
+    });
+    return;
+  }
+
+  try {
+    // Llamar al servicio de asignación
+    const result = await assignIncident(
+      incidentId,
+      userId
+    );
+
+    // Comprobar posibles errores
+    if (result.error) {
+
+      if (
+        result.error === "Incidencia no encontrada" ||
+        result.error === "Usuario no encontrado"
+      ) {
+        res.status(404).json({
+          message: result.error
+        });
+        return;
+      }
+
+      res.status(400).json({
+        message: result.error
+      });
+      return;
+    }
+
+    // Asignación exitosa
+    res.status(200).json({
+      message: "Incidencia asignada correctamente",
+      data: result.incident
+    });
+
+  } catch (error) {
+    console.error("Error al asignar incidencia:", error);
+
+    res.status(500).json({
+      message: "Error interno al asignar incidencia"
     });
   }
 };

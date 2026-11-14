@@ -2,8 +2,9 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 
-// Importar rutas de incidencias
+// Rutas de CampusFix
 import incidentRoutes from "./routes/incident.routes";
+import authRoutes from "./routes/auth.routes";
 
 const app = express();
 
@@ -20,7 +21,7 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 
-// Verificar estado del servidor
+// Verificar el servidor
 app.get("/api/health", (req: Request, res: Response) => {
   res.status(200).json({
     status: "OK",
@@ -29,7 +30,10 @@ app.get("/api/health", (req: Request, res: Response) => {
   });
 });
 
-// Rutas de incidencias
+// Rutas de incidencias (Entregable 1)
 app.use("/api/incidents", incidentRoutes);
+
+// Rutas de autenticación (Entregable 2)
+app.use("/api/auth", authRoutes);
 
 export default app;
