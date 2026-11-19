@@ -217,6 +217,7 @@ export const updateIncidentStatusController = async (
 
   const id = req.params.id;
 
+  // Validar el ID de la incidencia
   if (
     typeof id !== "string" ||
     !isValidObjectId(id)
@@ -242,6 +243,7 @@ export const updateIncidentStatusController = async (
 
   const { status } = input as Record<string, unknown>;
 
+  // Validar que sea un estado conocido
   if (!isValidStatus(status)) {
     res.status(400).json({
       message: "Estado no válido",
@@ -256,6 +258,7 @@ export const updateIncidentStatusController = async (
       status
     );
 
+    // Comprobar si existe la incidencia
     if (!updatedIncident) {
       res.status(404).json({
         message: "Incidencia no encontrada"
@@ -263,12 +266,37 @@ export const updateIncidentStatusController = async (
       return;
     }
 
+    // Actualización correcta
     res.status(200).json({
       message: "Estado actualizado correctamente",
       data: updatedIncident
     });
 
   } catch (error) {
+
+    // Transición de estado no permitida
+    if (
+      error instanceof Error &&
+      error.message === "TRANSICION_INVALIDA"
+    ) {
+      res.status(409).json({
+        message: "La transición de estado no está permitida"
+      });
+      return;
+    }
+
+    // Otra solicitud cambió el estado primero
+    if (
+      error instanceof Error &&
+      error.message === "CONFLICTO_DE_ESTADO"
+    ) {
+      res.status(409).json({
+        message: "El estado cambió durante la actualización"
+      });
+      return;
+    }
+
+    // Cualquier otro error
     console.error("Error al actualizar incidencia:", error);
 
     res.status(500).json({
@@ -286,9 +314,9 @@ export const assignIncidentController = async (
   res: Response
 ): Promise<void> => {
 
-  // Obtener ID de la incidencia
   const incidentId = req.params.id;
 
+  // Validar identificador de incidencia
   if (
     typeof incidentId !== "string" ||
     !isValidObjectId(incidentId)
@@ -299,7 +327,6 @@ export const assignIncidentController = async (
     return;
   }
 
-  // Obtener ID del empleado
   const input: unknown = req.body;
 
   if (
@@ -315,6 +342,7 @@ export const assignIncidentController = async (
 
   const { userId } = input as Record<string, unknown>;
 
+  // Validar identificador de usuario
   if (
     typeof userId !== "string" ||
     !isValidObjectId(userId)
@@ -326,7 +354,6 @@ export const assignIncidentController = async (
   }
 
   try {
-    // Llamar al servicio de asignación
     const result = await assignIncident(
       incidentId,
       userId
@@ -351,7 +378,7 @@ export const assignIncidentController = async (
       return;
     }
 
-    // Asignación exitosa
+    // Asignación correcta
     res.status(200).json({
       message: "Incidencia asignada correctamente",
       data: result.incident

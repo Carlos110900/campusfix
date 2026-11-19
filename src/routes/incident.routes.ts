@@ -18,22 +18,42 @@ import {
   requireAuth
 } from "../middleware/auth.middleware";
 
+import {
+  canChangeStatus
+} from "../middleware/status.middleware";
+
 const router = Router();
 
 // ==========================================
 // FEATURE 1: Registrar incidencias
+// Usuario autenticado
 // ==========================================
-router.post("/", createIncidentController);
+router.post(
+  "/",
+  requireAuth,
+  createIncidentController
+);
 
 // ==========================================
 // FEATURE 2: Consultar incidencias
+// Usuario autenticado
 // ==========================================
-router.get("/", getIncidentsController);
+router.get(
+  "/",
+  requireAuth,
+  getIncidentsController
+);
 
 // ==========================================
 // FEATURE 3: Actualizar estado
+// Administrador o tecnico asignado
 // ==========================================
-router.patch("/:id/status", updateIncidentStatusController);
+router.patch(
+  "/:id/status",
+  requireAuth,
+  canChangeStatus,
+  updateIncidentStatusController
+);
 
 // ==========================================
 // FEATURE 5: Asignar incidencia

@@ -66,21 +66,55 @@ export const getIncidents = async (
 
 export const updateIncidentStatus = async (
   id: string,
-  status: IncidentStatus
+  newStatus: IncidentStatus
 ) => {
   try {
-    const updatedIncident = await Incident.findByIdAndUpdate(
-      id,
-      { $set: { status } },
+    // Buscar la incidencia
+    const incident = await Incident.findById(id);
+
+    if (!incident) {
+      return null;
+    }
+
+    // Obtener el estado actual
+    const currentStatus = incident.status as IncidentStatus;
+
+    // Definir transiciones permitidas
+    const transitions: Record<IncidentStatus, IncidentStatus[]> = {
+      pendiente: ["en_proceso"],
+      en_proceso: ["resuelta"],
+      resuelta: []
+    };
+
+    // Comprobar si el cambio esta permitido
+    if (!transitions[currentStatus].includes(newStatus)) {
+      throw new Error("TRANSICION_INVALIDA");
+    }
+
+    // Actualizar solo si el estado no ha cambiado
+    const updatedIncident = await Incident.findOneAndUpdate(
+      {
+        _id: id,
+        status: currentStatus
+      },
+      {
+        $set: { status: newStatus }
+      },
       {
         new: true,
         runValidators: true
       }
     );
 
+    // Otra solicitud pudo modificar el estado primero
+    if (!updatedIncident) {
+      throw new Error("CONFLICTO_DE_ESTADO");
+    }
+
     return updatedIncident;
+
   } catch (error) {
-    console.error("Error al actualizar incidencia:", error);
+    console.error("Error al actualizar estado:", error);
     throw error;
   }
 };
